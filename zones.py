@@ -4,16 +4,19 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import random
 import networkx as nx
+import warnings
 
 zones = gpd.read_file('/home/safon010/Uber_OSRM/cincinnati_censustracts.json')
 # %%
 zones
 # %%
-graph = []
-for i in range(len(zones)):
-    print(i+1, "/" , str(len(zones)))
-    graph.append(ox.graph_from_polygon(zones.geometry[i], network_type='drive', retain_all=True, simplify=False, truncate_by_edge=True))
-G = nx.compose_all(graph)
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    graph = []
+    for i in range(len(zones)):
+        print(i+1, "/" , str(len(zones)))
+        graph.append(ox.graph_from_polygon(zones.geometry[i], network_type='drive', retain_all=True, simplify=False, truncate_by_edge=False))
+    G = nx.compose_all(graph)
 
 # %%
 # stats will be a list of lists with the following structure:
@@ -37,7 +40,8 @@ for i in range(500):
             shortest_path = nx.shortest_path_length(G, node1, node2, weight='length', method='dijkstra')
             stats[i].append([shortest_path])
             j += 1
-            print("zone combo: ", i+1, "/", 500, ",    path: ", j, "/", 500)
+            if j % 100 == 0:
+                print("zone combo: ", i+1, "/", 500, ",    path: ", j, "/", 500)
         except nx.exception.NetworkXNoPath:
             continue
 # %%
