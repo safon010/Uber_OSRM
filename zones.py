@@ -48,20 +48,3 @@ import csv
 with open('cin_stats.csv', 'w') as f:
     writer = csv.writer(f)
     writer.writerows(stats)
-# %%
-#practice
-# choose two random zones out of graph
-zone1 = graph[0]
-zone2 = graph[1]
-
-i=0
-while i<100:
-    node1 = random.choice(list(zone1.nodes))
-    node2 = random.choice(list(zone2.nodes))
-    try:
-        shortest_path = nx.shortest_path_length(G, node1, node2, weight='length', method='dijkstra')
-        print(i, shortest_path)
-        i+=1
-    except nx.exception.NetworkXNoPath:
-        continue
-# %%
