@@ -19,8 +19,8 @@ G = nx.compose_all(graph)
 # [[zone_11, zone_12, d_11, ..., d_11000]
 #   ...
 #  [zone_n1, zone_n2, d_n1,..., d_n1000]]
-num_paths = 10
-num_zone_combos = 10
+num_paths = 500
+num_zone_combos = 500
 stats = []
 for i in range(num_zone_combos):
     # choose two random indeces out oof len(zones) zones
