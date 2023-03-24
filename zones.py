@@ -22,7 +22,8 @@ G = nx.compose_all(graph)
 num_paths = 500
 num_zone_combos = 500
 stats = []
-for i in range(num_zone_combos):
+i = 0
+while i < num_zone_combos:
     # choose two random indeces out oof len(zones) zones
     # and append corresponding zones to stats
     # and assign zone1 and zone2 to the corresponding graph
@@ -30,8 +31,9 @@ for i in range(num_zone_combos):
     zone1 = graph[ind1]
     zone2 = graph[ind2]
     stats.append([zones.loc[ind1], zones.loc[ind2]])
+    count = 0
     j = 0
-    while j < num_paths:
+    while j < num_paths and count < 100:
         node1 = random.choice(list(zone1.nodes))
         node2 = random.choice(list(zone2.nodes))
         try:
@@ -41,7 +43,15 @@ for i in range(num_zone_combos):
             if j % 1 == 0:
                 print("zone combo: ", i+1, "/", num_zone_combos, ",    path: ", j, "/", num_paths)
         except nx.exception.NetworkXNoPath:
+            count += 1
             continue
+    if count == 100:
+        stats.pop()
+        continue
+    else:
+        i += 1
+        continue
+
 # %%
 # save stats to cin_stats.csv
 import csv
