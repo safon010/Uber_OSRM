@@ -1,10 +1,15 @@
 # %%
+import numpy as np
+np.float = float 
+import pandas as pd
 import csv
 import osmnx as ox
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import random
 import networkx as nx
+import json
+from shapely.geometry import Polygon
 
 # %%
 # load stats from cin_stats.csv as a list of lists
@@ -13,14 +18,27 @@ with open('cin_stats.csv', 'r') as f:
     stats = list(reader)
 
 # %%
-# load cincinnati_censustracts.json as a geodataframe
+# find areas of each zone
+with open('cincinnati_censustracts.json') as f:
+    areas = []
+    data = json.load(f)
+    for i in data['features']:
+        # find the area of each zone
+        area = Polygon(i['geometry']['coordinates'][0]).area
+        movement_id = i['properties']['MOVEMENT_ID']
+        # append the area to the list
+        areas.append([movement_id, area])
+
+# %%
+# load cincinnati_censustracts.json as a GeoDataFrame
 zones = gpd.read_file('cincinnati_censustracts.json')
 # convert to graph objects
 graph = []
 for i in range(len(zones)):
     print(i+1, "/" , str(len(zones)))
-    graph.append(ox.graph_from_polygon(zones.geometry[i], network_type='drive', retain_all=False, simplify=False, truncate_by_edge=True))
-G = nx.compose_all(graph)
+    # append the graph to the list
+    graph.append([zones.MOVEMENT_ID[i], ox.graph_from_polygon(zones.geometry[i], network_type='drive', retain_all=False, simplify=False, truncate_by_edge=True)])
+G = nx.compose_all([x[1] for x in graph])
 
 # %%
 # replace the strings in the first two columns with the corresponding graphs from cincinnati_censustracts.json
@@ -42,39 +60,32 @@ for i in range(len(stats)):
 for i in range(len(stats)):
     stats[i] = stats[i][:2] + [int(float(x[1:-1])) for x in stats[i][2:]]
     stats[i] = [stats[i][0], stats[i][1], stats[i][2:]]
+
 # %%
-# add a column to stats with the average distance between the two zones
+#average distance between the two zones
 for i in range(len(stats)):
     stats[i].append(sum(stats[i][2])/len(stats[i][2]))
 
 # %%
-# convert the first two columns of stats to GeoDataFrames
-zone1_gdf = []
-zone2_gdf = []
+# ratio of the area of the first zone to the area of the second zone from areas list
 for i in range(len(stats)):
-    zone1_gdf.append(ox.project_gdf(ox.graph_to_gdfs(stats[i][0], nodes=True, edges=False, fill_edge_geometry=True)[0]))
-    zone2_gdf.append(ox.project_gdf(ox.graph_to_gdfs(stats[i][1], nodes=True, edges=False, fill_edge_geometry=True)[0]))
-
-# add a column to stats with the ratio of the area of the first zone to the area of the second zone
-for i in range(len(stats)):
-    # calculate the area of the first zone
-    zone1_area = zone1_gdf[i]['geometry'].area
-    # calculate the area of the second zone
-    zone2_area = zone2_gdf[i]['geometry'].area
-    # calculate the ratio of the first zone to the second zone
-    stats[i].append(zone1_area/zone2_area)
-
+    # find MOVEMENT_ID in first two columns
+    area = []
+    for j in range(2):
+        # find the MOVEMENT_ID
+        id = stats[i][j][0]
+        # find the index of the graph with the same MOVEMENT_ID
+        for k in range(len(areas)):
+            if id == str(areas[k][0]):
+                area.append(areas[k][1])
+                break
+            else:
+                continue
+    stats[i].append(area[0]/area[1])
 
 # %%
 # add a column to stats with a list containing the land type (rural, suburban, urban) of the two zones
-for i in range(len(stats)):
-    # convert zones to gdfs and extract the land type
-    zone1 = ox.graph_from_polygon(stats[i][0].geometry, network_type='drive', retain_all=True, simplify=False, truncate_by_edge=True)
-    zone1_land_type = ox.project_gdf(ox.graph_to_gdfs(zone1, nodes=False, edges=False, fill_edge_geometry=True)[1]).landuse[0]
-    zone2 = ox.graph_from_polygon(stats[i][1].geometry, network_type='drive', retain_all=True, simplify=False, truncate_by_edge=True)
-    zone2_land_type = ox.project_gdf(ox.graph_to_gdfs(zone2, nodes=False, edges=False, fill_edge_geometry=True)[1]).landuse[0]
-    # add the land type to stats
-    stats[i].append([zone1_land_type, zone2_land_type])
+
 # %%
 # add a column to stats with the average yearly precipitation of the two zones
 for i in range(len(stats)):
